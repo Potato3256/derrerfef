@@ -1,33 +1,36 @@
 import discord
 import dotenv
-import os  # osモジュールのインポート
+import os
 
 from server import server_thread
 
 # 環境変数をロード
 dotenv.load_dotenv()
-
-# 環境変数からトークンを取得
 TOKEN = os.environ.get("TOKEN")
-if not TOKEN:
-    raise ValueError("TOKENが環境変数に設定されていません。")
 
-# Discordの設定
+# 必要な特権インテントを設定
 intents = discord.Intents.default()
-intents.message_content = True
-intents.voice_states = True
+intents.message_content = True  # メッセージ内容の取得
+intents.members = True          # サーバーメンバー情報の取得
+intents.presences = True        # プレゼンス情報の取得（必要な場合）
+
+# クライアントの初期化
 client = discord.Client(intents=intents)
+
+@client.event
+async def on_ready():
+    print(f'Logged in as {client.user}')
 
 @client.event
 async def on_message(message):
     if message.author == client.user:
         return
-
     if message.content.startswith('$hello'):
         await message.channel.send('Hello!')
 
-# Koyeb用 サーバー立ち上げ
+# サーバー起動
 server_thread()
 
-# Discordクライアントを起動
+# Botを実行
 client.run(TOKEN)
+
