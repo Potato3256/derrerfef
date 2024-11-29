@@ -4,5 +4,5 @@ uvicorn==0.29.0
 fastapi==0.110.1
 instagrapi==1.1.4
 moviepy==1.0.3
-Pillow==9.5.0  # Pillowの最新安定版（例）
-replicate==0.3.0  # replicateの最新安定版（例）
+Pillow==10.3.0  # Pillowの最新安定版（例）
+replicate==1.0.4  # replicateの最新安定版（例）
