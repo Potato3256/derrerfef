@@ -128,7 +128,7 @@ def create_base_image(width=300, height=30, bg_color=(255, 255, 255), border_col
     return img
 
 class ConfirmButtons(discord.ui.View):
-    def __init__(self, user_info ,ticket_channel):
+    def __init__(self, user_info, ticket_channel):
         super().__init__(timeout=None)  # タイムアウトなし
         self.user_info = user_info
         self.ticket_channel = ticket_channel
@@ -138,65 +138,51 @@ class ConfirmButtons(discord.ui.View):
         if self.user_info.follower_count >= 2000:
             await interaction.response.send_message("**フォロワー2000人以上のアカウントはこちらで受け付けていません;; **")
         else:
-            # 送金ボタンと送金確認ボタンをビューに追加
-            send_money_button = discord.ui.Button(label="送金", style=discord.ButtonStyle.green, url="https://qr.paypay.ne.jp/p2p01_4iAho1YsmQ08Hwrb")
-            confirm_send_button = discord.ui.Button(label="送金確認", style=discord.ButtonStyle.blurple)
-            
-            # 送金確認ボタンのコールバック設定
-            async def confirm_send(interaction: discord.Interaction):
-                progress_message = None
-                try:
-                    # 送金確認後の進行状況更新
-                    progress_message = await interaction.response.send_message("送金処理中... 進行状況をお待ちください。")
-                    progress_bar = 0
+            # 各支払いボタンを作成
+            amazon_button = discord.ui.Button(label="Amazonで支払い", style=discord.ButtonStyle.primary)
+            paypay_button = discord.ui.Button(label="PayPayで支払い", style=discord.ButtonStyle.primary)
+            paypal_button = discord.ui.Button(label="PayPalで支払い", style=discord.ButtonStyle.primary)
+            bank_button = discord.ui.Button(label="銀行振り込みで支払い", style=discord.ButtonStyle.primary)
+            ltc_button = discord.ui.Button(label="LTCで支払い", style=discord.ButtonStyle.primary)
 
-                    while progress_bar <= 100:
-                        img = create_base_image()
-                        draw = ImageDraw.Draw(img)
-                        
-                        width, height = img.size
-                        filled_width = int((progress_bar / 100) * width)
-                        draw.rectangle([0, 0, filled_width, height], fill=(0, 0, 255))  # 進行状況の青い部分
+            # ボタンごとのコールバック関数を設定
+            async def amazon_callback(interaction: discord.Interaction):
+                await interaction.response.send_message("**Amazonギフトカードのコードをこちらに入力してください。**")
 
-                        with io.BytesIO() as image_binary:
-                            img.save(image_binary, 'PNG')
-                            image_binary.seek(0)
-                            await progress_message.edit(
-                                content=f"送金処理中... {progress_bar}% 完了", 
-                                file=discord.File(image_binary, filename="progress.png")
-                            )
+            async def paypay_callback(interaction: discord.Interaction):
+                await interaction.response.send_message(
+                    "**依頼料金3000円頂戴します!\n送金できましたら送金確認ボタンを押してください**",
+                    view=discord.ui.View().add_item(
+                        discord.ui.Button(label="送金確認", style=discord.ButtonStyle.blurple)
+                    )
+                )
 
-                        progress_bar += 1
-                        await asyncio.sleep(3)
+            async def notify_admin(interaction: discord.Interaction, method: str):
+                admin_role_id = 1310179669026275339
+                await interaction.response.send_message(
+                    f"{method} の支払いを選択しました。 <@&{admin_role_id}> 管理者の対応をお待ちください。"
+                )
 
-                    # Stable Diffusionを使用して最終的な画像を生成
-                    model = replicate.models.get("stability-ai/stable-diffusion")
-                    version = model.versions.get("db21e1e6c51c0d3f3d8c2787e60f8b75")
-                    output = version.predict(prompt="A beautiful digital artwork of a money transfer process")
-
-                    # 生成した画像のURLを使って画像を取得し、メッセージを更新
-                    final_image_url = output[0]
-                    await progress_message.edit(content="送金処理が完了しました！", embed=None, file=discord.File(final_image_url))
-
-                except Exception as e:
-                    print(f"エラーが発生しました: {e}")
-                    if progress_message:
-                        await progress_message.edit(content="送金処理中にエラーが発生しました。再度お試しください。")
-
-            confirm_send_button.callback = confirm_send
+            # コールバックをボタンに割り当て
+            amazon_button.callback = amazon_callback
+            paypay_button.callback = paypay_callback
+            paypal_button.callback = lambda i: notify_admin(i, "PayPal")
+            bank_button.callback = lambda i: notify_admin(i, "銀行振り込み")
+            ltc_button.callback = lambda i: notify_admin(i, "LTC")
 
             # 新しいビューを作成し、ボタンを追加
             view = discord.ui.View()
-            view.add_item(send_money_button)
-            view.add_item(confirm_send_button)
+            view.add_item(amazon_button)
+            view.add_item(paypay_button)
+            view.add_item(paypal_button)
+            view.add_item(bank_button)
+            view.add_item(ltc_button)
 
-            # 依頼料金メッセージを送信し、ビューを表示
-            await interaction.response.send_message("**依頼料金3000円頂戴します!\n送金できましたら送金確認ボタンを押してください**", view=view)
-            
+            # 支払い方法メッセージを送信
+            await interaction.response.send_message("**以下からお支払い方法を選択してください。**", view=view)
+
     @discord.ui.button(label="違う", style=discord.ButtonStyle.red)
     async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("やりなおしてください。")
-
         delete_button = discord.ui.Button(label="チケットを削除", style=discord.ButtonStyle.danger)
 
         async def delete_ticket_button(interaction: discord.Interaction):
@@ -206,7 +192,10 @@ class ConfirmButtons(discord.ui.View):
         delete_button.callback = delete_ticket_button
         view = discord.ui.View()
         view.add_item(delete_button)
-        await interaction.followup.send("チケットを削除するには以下のボタンを押してください。", view=view)
+        await interaction.response.send_message(
+            "チケットを削除するには以下のボタンを押してください。", view=view
+        )
+
 
 @bot.event
 async def on_message(message: discord.Message):
