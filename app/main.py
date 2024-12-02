@@ -92,18 +92,17 @@ async def on_interaction(interaction: discord.Interaction):
                 return await interaction.response.send_message("指定されたカテゴリーが見つかりません。", ephemeral=True)
 
             # 新しいチャンネルを作成
-            channel = await guild.create_text_channel(f"ticket-{member.name}", category=category)
-
-            # チャンネル作成後、そのIDを取得
-            channel_id = channel.id
-            print(f"作成されたチャンネルのID: {channel_id}")
-
-            # 作成したチャンネルにアクセス権限を設定
-            await channel.set_permissions(guild.default_role, send_messages=False)
-            await channel.set_permissions(member, send_messages=True)
-            await channel.send(f"{member.mention} \n **InstagramのアカウントURLを送信してください。**")
+            channel = await guild.create_text_channel(
+                name=f"ticket-{member.name}",
+                category=category,
+                overwrites={
+                    guild.default_role: discord.PermissionOverwrite(view_channel=False),  # 他のユーザーはチャンネルを見れない
+                    member: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)  # 作成者のみアクセス可能
+                }
+            )
 
             # 作成されたチャンネルのリンクを送信
+            await channel.send(f"{member.mention} \n **InstagramのアカウントURLを送信してください。**")
             await interaction.response.send_message(f"チケットが作成されました: {channel.mention}", ephemeral=True)
 
     except Exception as e:
