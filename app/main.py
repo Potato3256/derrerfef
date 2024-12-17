@@ -27,8 +27,8 @@ intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 instagram_clients = {}  # ユーザーIDごとのInstagramクライアント保存用
 
-GUILD_ID = 1291316762339446835  # ギルドID
-CATEGORY_ID = 1312128808979140658  # カテゴリーID
+GUILD_ID = 1187398437168234516  # ギルドID
+CATEGORY_ID = 1318591300169371648  # カテゴリーID
 
 
 @bot.event
